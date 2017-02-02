@@ -1,6 +1,9 @@
 <!doctype html>
 <html lang="en">
 <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
     <link rel="stylesheet" href="https://openlayers.org/en/v3.20.1/css/ol.css" type="text/css">
     <style>
         body, html {
@@ -12,58 +15,70 @@
             width: 100%;
         }
     </style>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.1.1.slim.min.js" integrity="sha384-A7FZj7v+d/sdmMqp/nOQwliLvUsJfDHW+k9Omg/a/EheAdgtzNs3hpfag6Ed950n" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js" integrity="sha384-DztdAPBWPRXSA/3eYEEUWrWCy7G5KFbe8fFjk5JAIxUYHKkDx6Qin1DkWx51bBrb" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js" integrity="sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn" crossorigin="anonymous"></script>
     <script src="https://openlayers.org/en/v3.20.1/build/ol-debug.js" type="text/javascript"></script>
     <title>OpenLayers 3 example</title>
 </head>
 <body>
-<div id="map" class="map"></div>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-9">
+            <div id="map" class="map"></div>
+        </div>
+        <div id="sidebar" class="col-md-3">
+            <div id="side">
+
+            </div>
+            <!--input type="range" id="tijd" max="1500000000000" min="1000000000000" step="86400000"-->
+            <input type="range" id="tijd" max="2017" min="1000" step="1" >
+
+            <div id="datum"></div>
+        </div>
+    </div>
+</div>
 <script type="text/javascript">
+    var TIJD = new Date(1300000000000);
+    var JAAR = 2017;
     function createStyle() {
-        var fill = new ol.style.Fill({color: '#d8e8c8'});
-        var stroke = new ol.style.Stroke({color: '#d8e8c8', width: 1});
+        var fill = new ol.style.Fill({color: 'rgba(255,255,255,0.2)'});
+        var stroke = new ol.style.Stroke({color: '#2c7fb8', width: 1});
         var polygon = new ol.style.Style({fill: fill});
         var strokedPolygon = new ol.style.Style({fill: fill, stroke: stroke});
+
         var line = new ol.style.Style({stroke: stroke});
         var styles = [];
         return function (feature, resolution){
             var length = 0;
-            styles[length++] = strokedPolygon;
-            styles.length = length;
-            return styles;
+            var begin = feature.get('begindatumtijdvakgeldigheid');
+            var begintijd = begin?new Date(begin):new Date();
+            var eind = feature.get('einddatumtijdvakgeldigheid');
+            var eindtijd = eind?new Date(eind):new Date();
+            var bouwjaar = feature.get('bouwjaar')
+            if(+bouwjaar <= JAAR ) {
+                styles[length++] = strokedPolygon;
+                styles.length = length;
+                return styles;
+
+            }
+
         }
     }
- /*   var parser = new ol.format.WMTSCapabilities();
-
-    fetch('http://192.168.40.8:3389/geoserver/gwc/service/wmts?REQUEST=GetCapabilities').then(function(response) {
-        return response.text();
-    }).then(function(text) {
-        var result = parser.read(text);
-        var wmts = new ol.source.WMTS(ol.source.WMTS.optionsFromCapabilities(result,
-            {layer: 'research:pand', matrixSet: 'EPSG:3857', format: 'application/x-protobuf;type=mapbox-vector'})
-        );
-
-
-        var map = new ol.Map({
-            target: 'map',
-            layers: [
-                new ol.layer.Tile({
-                    source: new ol.source.OSM()
-                }),
-                new ol.layer.VectorTile({
-                    source: new ol.source.VectorTile({
-                        format: new ol.format.MVT(),
-                        tileUrlFunction: wmts.getTileUrlFunction(),
-                        tileGrid: wmts.getTileGrid()
-                    })
-                })
-
-            ],
-            view: new ol.View({
-                center: ol.proj.fromLonLat([4.9, 52.35]),
-                zoom: 15
-            })
-        });
-    });*/
+    var bagpanden = new ol.layer.VectorTile({
+        source: new ol.source.VectorTile({
+            attributions: 'BAG data: © <a href="https://www.kadaster.nl/bag">Kadaster</a> ' +
+            'Client: <a href="https://research.geodan.nl/">' +
+            'Geodan Research</a>',
+            format: new ol.format.MVT(),
+            tileGrid: ol.tilegrid.createXYZ({maxZoom: 22}),
+            tilePixelRatio: 1.000000001,
+            url: 'http://research.geodan.nl/service/geoserver/gwc/service/tms/1.0.0/research%3Apand@World_3857@pbf/' +
+            '{z}/{x}/{-y}.pbf'
+        }),
+        style: createStyle()
+    });
     var map = new ol.Map({
     layers: [
         new ol.layer.Tile({
@@ -71,18 +86,7 @@
                 url: 'https://saturnus.geodan.nl/mapproxy/osm/tiles/osmgrayscale_EPSG900913/{z}/{x}/{y}.png?origin=nw'
             })
         }),
-        new ol.layer.VectorTile({
-            source: new ol.source.VectorTile({
-                attributions: 'BAG data: © <a href="https://www.kadaster.nl/bag">Kadaster</a> ' +
-                'Client: <a href="https://research.geodan.nl/">' +
-                'Geodan Research</a>',
-                format: new ol.format.MVT(),
-                tileGrid: ol.tilegrid.createXYZ({maxZoom: 22}),
-                tilePixelRatio: 1.000000001,
-                url: 'http://research.geodan.nl/service/geoserver/gwc/service/tms/1.0.0/research%3Apand@World_3857@pbf/' +
-                '{z}/{x}/{-y}.pbf'
-            })
-        })
+        bagpanden
     ],
         target: 'map',
         view: new ol.View({
@@ -90,7 +94,79 @@
             zoom: 15
     })
     });
+    var select = null;  // ref to currently selected interaction
 
+    var select = new ol.interaction.Select({
+        condition: ol.events.condition.pointerMove,
+        multi: true
+    });
+
+    map.addInteraction(select);
+    select.on('select', function(e) {
+        var info = '';
+
+        var features = e.target.getFeatures();
+        features.forEach(function(feature) {
+
+
+            var props = feature.getProperties();
+
+
+            info += "<h2>" + props.identificatie + "</h2>";
+            info += "<p>begin: " + props.begindatumtijdvakgeldigheid + "</p>";
+            info += "<p>eind: " + props.einddatumtijdvakgeldigheid + "</p>";
+            info += "<p>bouwjaar: " + props.bouwjaar + "</p>";
+            info += "<p>Status: " + props.pandstatus + "</p>";
+            // Offset the popup so it points at the middle of the marker not the tip
+
+
+        })
+            var el =  document.getElementById('side')
+        el.innerHTML = info;
+    });
+
+
+    /*
+    map.on('singleclick', function(evt) {
+
+        // Attempt to find a feature in one of the visible vector layers
+        var features = []
+
+            map.forEachFeatureAtPixel(evt.pixel, function(feature, layer) {
+            features.push(feature);
+        });
+        var info = '';
+        features.forEach(function(feature) {
+
+
+            var props = feature.getProperties();
+
+
+
+
+            info += "<h2>"+ props.identificatie + "</h2>";
+            info += "<p>begin: " + props.begindatumtijdvakgeldigheid + "</p>";
+            info += "<p>eind: " + props.einddatumtijdvakgeldigheid + "</p>";
+            info += "<p>bouwjaar: " + props.bouwjaar + "</p>";
+            info += "<p>Status: "  + props.pandstatus + "</p>";
+            // Offset the popup so it points at the middle of the marker not the tip
+
+
+
+
+        })
+        var e =  document.getElementById('side')
+        e.innerHTML = info;
+    });
+*/
+    $('#tijd').on('change',function (d,e) {
+        JAAR = +d.target.value
+
+        var s = bagpanden.getSource();
+       s.refresh();
+        var e =document.getElementById('datum');
+        e.innerHTML =JAAR;
+    })
 </script>
 </body>
 </html>
