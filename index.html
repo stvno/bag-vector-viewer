@@ -42,27 +42,31 @@
 <script type="text/javascript">
     var TIJD = new Date(1300000000000);
     var JAAR = 2017;
-    function createStyle() {
-        var fill = new ol.style.Fill({color: 'rgba(255,255,255,0.2)'});
-        var stroke = new ol.style.Stroke({color: '#2c7fb8', width: 1});
-        var polygon = new ol.style.Style({fill: fill});
-        var strokedPolygon = new ol.style.Style({fill: fill, stroke: stroke});
+    var ID = null;
+    var showStyle = [
+        new ol.style.Style({
+            fill: new ol.style.Fill({color: 'rgba(255,255,255,0.4)'}),
+            stroke: new ol.style.Stroke({color: 'black', width: 1})
+        })
+    ];
+    var selectStyle = new ol.style.Style({
+        fill: new ol.style.Fill({color: 'navy'}),
+        stroke: new ol.style.Stroke({color: 'black', width: 2})
+    })
 
-        var line = new ol.style.Style({stroke: stroke});
-        var styles = [];
+    function createStyle() {
+
         return function (feature, resolution){
-            var length = 0;
-            var begin = feature.get('begindatumtijdvakgeldigheid');
-            var begintijd = begin?new Date(begin):new Date();
-            var eind = feature.get('einddatumtijdvakgeldigheid');
-            var eindtijd = eind?new Date(eind):new Date();
+
             var bouwjaar = feature.get('bouwjaar')
             if(+bouwjaar <= JAAR ) {
-                styles[length++] = strokedPolygon;
-                styles.length = length;
-                return styles;
+                if(feature.get('identificatie')==ID) {
+                    return selectStyle;
+                }
+                else                return showStyle;
 
             }
+
 
         }
     }
@@ -74,7 +78,7 @@
             format: new ol.format.MVT(),
             tileGrid: ol.tilegrid.createXYZ({maxZoom: 22}),
             tilePixelRatio: 1.000000001,
-            url: 'http://research.geodan.nl/service/geoserver/gwc/service/tms/1.0.0/research%3Apand@World_3857@pbf/' +
+            url: '//research.geodan.nl/service/geoserver/gwc/service/tms/1.0.0/research%3Apand@World_3857@pbf/' +
             '{z}/{x}/{-y}.pbf'
         }),
         style: createStyle()
@@ -94,35 +98,22 @@
             zoom: 15
     })
     });
-    var select = null;  // ref to currently selected interaction
-
-    var select = new ol.interaction.Select({
-        condition: ol.events.condition.pointerMove,
-        multi: true
-    });
-
-    map.addInteraction(select);
-    select.on('select', function(e) {
-        var info = '';
-
-        var features = e.target.getFeatures();
-        features.forEach(function(feature) {
 
 
-            var props = feature.getProperties();
 
+    var displayFeatureInfo = function(pixel) {
 
-            info += "<h2>" + props.identificatie + "</h2>";
-            info += "<p>begin: " + props.begindatumtijdvakgeldigheid + "</p>";
-            info += "<p>eind: " + props.einddatumtijdvakgeldigheid + "</p>";
-            info += "<p>bouwjaar: " + props.bouwjaar + "</p>";
-            info += "<p>Status: " + props.pandstatus + "</p>";
-            // Offset the popup so it points at the middle of the marker not the tip
+        map.forEachFeatureAtPixel(pixel, function(feature, layer) {
+            ID= feature.get('identificatie')
+        });
 
+    };
 
-        })
-            var el =  document.getElementById('side')
-        el.innerHTML = info;
+    map.on('pointermove', function(evt) {
+        var pixel = evt.pixel;
+        displayFeatureInfo(pixel);
+        var s = bagpanden.getSource();
+        s.refresh();
     });
 
 
