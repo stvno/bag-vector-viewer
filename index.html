@@ -33,9 +33,9 @@
 
             </div>
             <!--input type="range" id="tijd" max="1500000000000" min="1000000000000" step="86400000"-->
-            <input type="range" id="tijd" max="2017" min="1000" step="1" >
+            <input type="range" id="tijd" max="2017" min="1000" step="1" value="2017">
 
-            <div id="datum"></div>
+            <div id="datum">2017</div>
         </div>
     </div>
 </div>
@@ -46,7 +46,7 @@
     var showStyle = [
         new ol.style.Style({
             fill: new ol.style.Fill({color: 'rgba(255,255,255,0.4)'}),
-            stroke: new ol.style.Stroke({color: 'black', width: 1})
+            stroke: new ol.style.Stroke({color: 'navy', width: 1})
         })
     ];
     var selectStyle = new ol.style.Style({
