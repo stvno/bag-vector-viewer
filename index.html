@@ -83,7 +83,7 @@
             url: '//research.geodan.nl/service/geoserver/gwc/service/tms/1.0.0/research%3Apand@World_3857@pbf/' +
             '{z}/{x}/{-y}.pbf'
         }),
-        style: (function() {
+      /*  style: (function() {
             var stroke = new ol.style.Stroke({
                 color: 'black'
             });
@@ -107,7 +107,7 @@
 
                     })];
             };
-        })()
+        })()*/
     });
     var map = new ol.Map({
     layers: [
@@ -124,18 +124,11 @@
             zoom: 15
     })
     });
-/*
-    var select = null;  // ref to currently selected interaction
 
-    var select = new ol.interaction.Select({
-        condition: ol.events.condition.pointerMove,
-        multi: true,
-        style: new ol.style.Style({
-            fill: new ol.style.Fill({
-                color: 'rgba(200,255,255,0.5)'
-            }),
-            stroke: new ol.style.Stroke({color: 'black', width: 2})
-        })
+    var select = null;  // ref to currently selected interaction
+    select = new ol.interaction.Select({
+        condition: ol.events.condition.click,
+        multi: false
     });
 
     map.addInteraction(select);
@@ -163,7 +156,7 @@
     });
 
 
-*/
+/*
 
      var displayFeatureInfo = function(pixel) {
 
@@ -179,7 +172,7 @@
          displayFeatureInfo(pixel);
 
      });
-
+*/
 
     /*
     map.on('singleclick', function(evt) {
