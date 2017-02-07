@@ -54,34 +54,60 @@
         stroke: new ol.style.Stroke({color: 'black', width: 2})
     })
 
-    function createStyle() {
+    function createStyle(feature, resolution) {
 
-        return function (feature, resolution){
+
 
             var bouwjaar = feature.get('bouwjaar')
-            if(+bouwjaar <= JAAR ) {
+           // if(+bouwjaar <= JAAR ) {
                 if(feature.get('identificatie')==ID) {
                     return selectStyle;
                 }
                 else                return showStyle;
 
-            }
+          //  }
 
 
-        }
+
     }
     var bagpanden = new ol.layer.VectorTile({
         source: new ol.source.VectorTile({
             attributions: 'BAG data: © <a href="https://www.kadaster.nl/bag">Kadaster</a> ' +
             'Client: <a href="https://research.geodan.nl/">' +
             'Geodan Research</a>',
-            format: new ol.format.MVT(),
+            format: new ol.format.MVT({
+                featureClass: ol.Feature
+            }),
             tileGrid: ol.tilegrid.createXYZ({maxZoom: 22}),
             tilePixelRatio: 1.000000001,
             url: '//research.geodan.nl/service/geoserver/gwc/service/tms/1.0.0/research%3Apand@World_3857@pbf/' +
             '{z}/{x}/{-y}.pbf'
         }),
-        style: createStyle()
+        style: (function() {
+            var stroke = new ol.style.Stroke({
+                color: 'black'
+            });
+            var textStroke = new ol.style.Stroke({
+                color: '#333',
+                width: 3
+            });
+            var textFill = new ol.style.Fill({
+                color: '#000'
+            });
+            return function(feature, resolution) {
+                if(feature.get('identificatie')==ID) {
+                    return [new ol.style.Style({
+                        stroke: textStroke
+
+                    })];
+                }
+                else
+                    return [new ol.style.Style({
+                        stroke: stroke
+
+                    })];
+            };
+        })()
     });
     var map = new ol.Map({
     layers: [
@@ -98,23 +124,61 @@
             zoom: 15
     })
     });
+/*
+    var select = null;  // ref to currently selected interaction
 
-
-
-    var displayFeatureInfo = function(pixel) {
-
-        map.forEachFeatureAtPixel(pixel, function(feature, layer) {
-            ID= feature.get('identificatie')
-        });
-
-    };
-
-    map.on('pointermove', function(evt) {
-        var pixel = evt.pixel;
-        displayFeatureInfo(pixel);
-        var s = bagpanden.getSource();
-        s.refresh();
+    var select = new ol.interaction.Select({
+        condition: ol.events.condition.pointerMove,
+        multi: true,
+        style: new ol.style.Style({
+            fill: new ol.style.Fill({
+                color: 'rgba(200,255,255,0.5)'
+            }),
+            stroke: new ol.style.Stroke({color: 'black', width: 2})
+        })
     });
+
+    map.addInteraction(select);
+    select.on('select', function(e) {
+        var info = '';
+
+        var features = e.target.getFeatures();
+        features.forEach(function(feature) {
+
+
+            var props = feature.getProperties();
+
+
+            info += "<h2>" + props.identificatie + "</h2>";
+            info += "<p>begin: " + props.begindatumtijdvakgeldigheid + "</p>";
+            info += "<p>eind: " + props.einddatumtijdvakgeldigheid + "</p>";
+            info += "<p>bouwjaar: " + props.bouwjaar + "</p>";
+            info += "<p>Status: " + props.pandstatus + "</p>";
+            // Offset the popup so it points at the middle of the marker not the tip
+
+
+        })
+        var el =  document.getElementById('side')
+        el.innerHTML = info;
+    });
+
+
+*/
+
+     var displayFeatureInfo = function(pixel) {
+
+         map.forEachFeatureAtPixel(pixel, function(feature, layer) {
+             ID= feature.get('identificatie');
+             layer.changed();
+         });
+
+     };
+
+     map.on('pointermove', function(evt) {
+         var pixel = evt.pixel;
+         displayFeatureInfo(pixel);
+
+     });
 
 
     /*

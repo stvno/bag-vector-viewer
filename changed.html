@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>call layer.changed()</title>
+    <script src="https://openlayers.org/en/v3.20.1/build/ol-debug.js" type="text/javascript"></script>
+    <style>
+        body, html {
+            padding:0;
+            margin:0;
+        }
+        .map {
+            height: 100vh;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+<div id="map" class="map"></div>
+
+<script type="text/javascript">
+    var ID = null;
+
+    var showStyle = [
+        new ol.style.Style({
+            fill: new ol.style.Fill({color: 'rgba(255,255,255,0.4)'}),
+            stroke: new ol.style.Stroke({color: 'navy', width: 1})
+        })
+    ];
+
+    var selectStyle = [
+        new ol.style.Style({
+            fill: new ol.style.Fill({color: 'rgba(100,100,255,0.4)'}),
+            stroke: new ol.style.Stroke({color: 'black', width: 2})
+        })
+    ];
+
+    function style(feature, resolution) {
+        var id = feature.get('identificatie');
+        if(id==ID) {
+            return selectStyle;
+        }
+        else {
+            return showStyle;
+        }
+    }
+
+    var bagpanden = new ol.layer.VectorTile({
+        source: new ol.source.VectorTile({
+            attributions: 'BAG data: © <a href="https://www.kadaster.nl/bag">Kadaster</a> ' +
+            'Client: <a href="https://research.geodan.nl/">' +
+            'Geodan Research</a>',
+            format: new ol.format.MVT(),
+            tileGrid: ol.tilegrid.createXYZ({maxZoom: 22}),
+            tilePixelRatio: 1.000000001,
+            url: '//research.geodan.nl/service/geoserver/gwc/service/tms/1.0.0/research%3Apand@World_3857@pbf/' +
+            '{z}/{x}/{-y}.pbf'
+        }),
+        style: style
+    });
+
+    var map = new ol.Map({
+        layers: [
+            new ol.layer.Tile({
+                source: new ol.source.OSM({
+                    url: 'https://saturnus.geodan.nl/mapproxy/osm/tiles/osmgrayscale_EPSG900913/{z}/{x}/{y}.png?origin=nw'
+                })
+            }),
+            bagpanden
+        ],
+        target: 'map',
+        view: new ol.View({
+            center: ol.proj.fromLonLat([4.9, 52.35]),
+            zoom: 15
+        })
+    });
+
+    var hilightFeature = function(pixel) {
+        map.forEachFeatureAtPixel(pixel, function(feature, layer) {
+            ID= feature.get('identificatie');
+            layer.changed();
+        });
+    };
+
+    map.on('pointermove', function(evt) {
+        var pixel = evt.pixel;
+        hilightFeature(pixel);
+    });
+
+</script>
+
+</body>
+</html>
