@@ -32,11 +32,25 @@
             <div id="side">
 
             </div>
-           
+
         </div>
     </div>
 </div>
 <script type="text/javascript">
+    var zoom = 15;
+    var center= ol.proj.fromLonLat([4.9, 52.35]);
+    if (window.location.hash !== '') {
+        var hash = window.location.hash.replace('#', '');
+        var parts = hash.split(';');
+        if (parts.length === 3) {
+            zoom = parseInt(parts[0], 10);
+            center = [
+                parseFloat(parts[1]),
+                parseFloat(parts[2])
+            ];
+        }
+    }
+
    var bagpanden = new ol.layer.VectorTile({
         source: new ol.source.VectorTile({
             attributions: 'BAG data: © <a href="https://www.kadaster.nl/bag">Kadaster</a> ' +
@@ -90,7 +104,12 @@
         el.innerHTML = info;
     });
 
-
+   map.on('moveend', function() {
+       var view = map.getView();
+       var center = view.getCenter();
+       window.location.hash =
+           view.getZoom() + ';' + center[0] + ';' + center[1];
+   });
 </script>
 </body>
 </html>
