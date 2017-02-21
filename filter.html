@@ -62,7 +62,7 @@
     var GB = [];
     var GBG = [];
     var PANDEN = [];
-    var zoom = 15;
+    var zoom = 18;
     var ACTIEFGEBRUIK = [];
     var center= ol.proj.fromLonLat([4.9, 52.35]);
     if (window.location.hash !== '') {
@@ -80,15 +80,15 @@
         return (begin <= GELDIGHEID && eind > GELDIGHEID);
     };
     var checkGebruiksDoel = function(features) {
-        var actievedoelen = ACTIEFGEBRUIK;
+
         if(features) {
             PANDEN = [...new Set(PANDEN.concat(features.filter(function(f){
-                return actievedoelen.some(r=> f.gebruiksdoelverblijfsobjectArr.indexOf(r) >= 0)
+                return f.gebruiksdoelverblijfsobjectArr.some(r=> ACTIEFGEBRUIK.indexOf(r) >= 0)
             }).map(function(d){ return d.gerelateerdpandArr}).reduce(function(a,b){ return b.concat(a)},[])))]
         }
         else {
             PANDEN = [...new Set(GBG.filter(function(f){
-                return actievedoelen.some(r=> f.gebruiksdoelverblijfsobjectArr.indexOf(r) >= 0)
+                return f.gebruiksdoelverblijfsobjectArr.some(r=> ACTIEFGEBRUIK.indexOf(r) >= 0)
             }).map(function(d){ return d.gerelateerdpandArr}).reduce(function(a,b){ return b.concat(a)},[]))]
         }
         //[...new Set(gbgeldig.filter(function(f){return f.gebruiksdoelverblijfsobject.indexOf('industriefunctie')>-1}).map(function(d){ return d.gerelateerdpandArr}).reduce(function(a,b){ return b.concat(a)},[]))]
@@ -97,11 +97,11 @@
 
     var unselectedStyle = new ol.style.Style({
         fill: new ol.style.Fill({color: 'rgba(204,204,204,0.6)'}),
-        stroke: new ol.style.Stroke({color: '#969696', width: 1})
+        stroke: new ol.style.Stroke({color: '#333', width: 1})
     });
     var filteredStyle = new ol.style.Style({
         fill: new ol.style.Fill({color: 'rgba(150,150,150,0.3)'}),
-        stroke: new ol.style.Stroke({color: '#7a0177', width: 1})
+        stroke: new ol.style.Stroke({color: '#7a0177', width: 2})
     });
     var pointStyle =   new ol.style.Style({image: new ol.style.Circle({
         radius: 2,
@@ -141,21 +141,16 @@
         var geldig = checkGeldigheid(feature.begin,feature.eind);
         if(geldig) {
             var id =feature.get('identificatie');
-           if(PANDEN.filter(function(d){return d==id}).length>0)
-            return filteredStyle;
-
+            if(PANDEN.filter(function(d){return d==id}).length>0) {
+                return filteredStyle;
+            }
+            else {
+                return unselectedStyle;
+            }
         }
 
     }
-    function createStyle(feature, resolution) {
 
-        var geldig = checkGeldigheid(feature.begin,feature.eind);
-        if(geldig&&feature.get('gebruiksdoelverblijfsobject')&&feature.get('gebruiksdoelverblijfsobject').indexOf('woonfunctie')>-1) {
-            var pand = feature.get('gerelateerdpand');
-        }
-
-
-    }
     var bagsource =new ol.source.VectorTile({
         attributions: 'BAG data: © <a href="https://www.kadaster.nl/bag">Kadaster</a> ' +
         'Client: <a href="https://research.geodan.nl/">' +
@@ -206,7 +201,7 @@ var verblijfsource = new ol.source.VectorTile({
     });
     var verblijfsobject = new ol.layer.VectorTile({
         source: verblijfsource,
-        style: createStyle
+        style:null
 
 
     });
