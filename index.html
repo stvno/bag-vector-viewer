@@ -19,7 +19,8 @@
     <script src="https://code.jquery.com/jquery-3.1.1.slim.min.js" integrity="sha384-A7FZj7v+d/sdmMqp/nOQwliLvUsJfDHW+k9Omg/a/EheAdgtzNs3hpfag6Ed950n" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js" integrity="sha384-DztdAPBWPRXSA/3eYEEUWrWCy7G5KFbe8fFjk5JAIxUYHKkDx6Qin1DkWx51bBrb" crossorigin="anonymous"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js" integrity="sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ol3/3.21.0-beta.2/ol-debug.js" type="text/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ol3/4.0.0/ol-debug.js" type="text/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crossfilter2/2.0.0-alpha.4/crossfilter.js"></script>
     <title>OpenLayers 3 example</title>
 </head>
 <body>
@@ -33,16 +34,36 @@
 
             </div>
             <!--input type="range" id="tijd" max="1500000000000" min="1000000000000" step="86400000"-->
-            <input type="range" id="tijd" max="2017" min="1900" step="1" value="2017">
+            <input type="range" id="tijd" max="325" min="0" step="1" value="320">
+
+
 
             <div id="datum">2017</div>
+
+            <label><input class="gbdoel" type="checkbox" group="gebruiksdoel" value="woonfunctie">woonfunctie</label><br/>
+            <label><input class="gbdoel" type="checkbox" group="gebruiksdoel" value="bijeenkomstfunctie">bijeenkomstfunctie</label><br/>
+            <label><input class="gbdoel" type="checkbox" group="gebruiksdoel" value="celfunctie">celfunctie</label><br/>
+            <label><input class="gbdoel" type="checkbox" group="gebruiksdoel" value="gezondheidszorgfunctie">gezondheidszorgfunctie</label><br/>
+            <label><input class="gbdoel" type="checkbox" group="gebruiksdoel" value="industriefunctie">industriefunctie</label><br/>
+            <label><input class="gbdoel" type="checkbox" group="gebruiksdoel" value="kantoorfunctie">kantoorfunctie</label><br/>
+            <label><input class="gbdoel" type="checkbox" group="gebruiksdoel" value="logiesfunctie">logiesfunctie</label><br/>
+            <label><input class="gbdoel" type="checkbox" group="gebruiksdoel" value="onderwijsfunctie">onderwijsfunctie</label><br/>
+            <label><input class="gbdoel" type="checkbox" group="gebruiksdoel" value="sportfunctie">sportfunctie</label><br/>
+            <label><input class="gbdoel" type="checkbox" group="gebruiksdoel" value="winkelfunctie">winkelfunctie</label><br/>
+            <label><input class="gbdoel" type="checkbox" group="gebruiksdoel" value="overige gebruiksfunctie">overige gebruiksfunctie</label><br/>
+
         </div>
     </div>
 </div>
 <script type="text/javascript">
     var GELDIGHEID = new Date();
     var NOW = new Date(GELDIGHEID.getTime()+1);
+    var GEBRUIKSDOELEN = {};
+    var GB = [];
+    var GBG = [];
+    var PANDEN = [];
     var zoom = 15;
+    var ACTIEFGEBRUIK = [];
     var center= ol.proj.fromLonLat([4.9, 52.35]);
     if (window.location.hash !== '') {
         var hash = window.location.hash.replace('#', '');
@@ -55,6 +76,24 @@
             ];
         }
     }
+    var checkGeldigheid = function(begin, eind) {
+        return (begin <= GELDIGHEID && eind > GELDIGHEID);
+    };
+    var checkGebruiksDoel = function(features) {
+        var actievedoelen = ACTIEFGEBRUIK;
+        if(features) {
+            PANDEN = [...new Set(PANDEN.concat(features.filter(function(f){
+                return actievedoelen.some(r=> f.gebruiksdoelverblijfsobjectArr.indexOf(r) >= 0)
+            }).map(function(d){ return d.gerelateerdpandArr}).reduce(function(a,b){ return b.concat(a)},[])))]
+        }
+        else {
+            PANDEN = [...new Set(GBG.filter(function(f){
+                return actievedoelen.some(r=> f.gebruiksdoelverblijfsobjectArr.indexOf(r) >= 0)
+            }).map(function(d){ return d.gerelateerdpandArr}).reduce(function(a,b){ return b.concat(a)},[]))]
+        }
+        //[...new Set(gbgeldig.filter(function(f){return f.gebruiksdoelverblijfsobject.indexOf('industriefunctie')>-1}).map(function(d){ return d.gerelateerdpandArr}).reduce(function(a,b){ return b.concat(a)},[]))]
+
+    };
 
     var unselectedStyle = new ol.style.Style({
         fill: new ol.style.Fill({color: 'rgba(204,204,204,0.6)'}),
@@ -64,40 +103,139 @@
         fill: new ol.style.Fill({color: 'rgba(150,150,150,0.3)'}),
         stroke: new ol.style.Stroke({color: '#7a0177', width: 1})
     });
+    var pointStyle =   new ol.style.Style({image: new ol.style.Circle({
+        radius: 2,
+        fill: new ol.style.Fill({color: 'rgba(150,150,150,0.3)'}),
+        stroke: new ol.style.Stroke({color: '#7a0177', width: 1})
+    })})
 
-    var checkGeldigheid = function(feature) {
+  /*  var checkGeldigheid = function(feature) {
         var geldig = false;
         var begin = feature.get('begindatumtijdvakgeldigheid');
         var eind = feature.get('einddatumtijdvakgeldigheid');
         var beginDatum = begin===undefined?null:new Date(begin);
         var eindDatum = eind===undefined?NOW:new Date(eind);
         if(beginDatum<=GELDIGHEID&&eindDatum>GELDIGHEID) geldig = true;
-
+        if(feature.get('pandstatus')=="Pand gesloopt") geldig = false;
         return geldig;
-    };
 
-    function createStyle(feature, resolution) {
-        var geldig = checkGeldigheid(feature);
+        /*
+         aanduidingrecordcorrectie         :         0
+         aanduidingrecordinactief         :         "false"
+         begindatumtijdvakgeldigheid         :         "2012-12-13 00:00:00.0"
+         bouwjaar         :         "1965"
+         documentdatum         :         "2012-12-13 00:00:00.0"
+         documentnummer         :         "SM00539331"
+         einddatumtijdvakgeldigheid         :         "2014-02-10 00:00:00.0"
+         geom_valid         :         "true"
+         geometry         :         ol.geom.Polygon
+         identificatie         :         "363100012066188"
+         inonderzoek         :         "false"
+         layer         :         "pand"
+         officieel         :         "false"
+         pandstatus         :         "Sloopvergunning verleend"
+         */
+ //   };
+
+    function createBagStyle(feature) {
+        var geldig = checkGeldigheid(feature.begin,feature.eind);
         if(geldig) {
+            var id =feature.get('identificatie');
+           if(PANDEN.filter(function(d){return d==id}).length>0)
             return filteredStyle;
+
         }
 
     }
-    var bagpanden = new ol.layer.VectorTile({
+    function createStyle(feature, resolution) {
+
+        var geldig = checkGeldigheid(feature.begin,feature.eind);
+        if(geldig&&feature.get('gebruiksdoelverblijfsobject')&&feature.get('gebruiksdoelverblijfsobject').indexOf('woonfunctie')>-1) {
+            var pand = feature.get('gerelateerdpand');
+        }
+
+
+    }
+    var bagsource =new ol.source.VectorTile({
+        attributions: 'BAG data: © <a href="https://www.kadaster.nl/bag">Kadaster</a> ' +
+        'Client: <a href="https://research.geodan.nl/">' +
+        'Geodan Research</a>',
+        format: new ol.format.MVT(),
+        tileGrid: ol.tilegrid.createXYZ({maxZoom: 22}),
+        tilePixelRatio: 1.000000001,
+        url: '//research.geodan.nl/service/geoserver/gwc/service/tms/1.0.0/research%3Apand_vog@World_3857@pbf/' +
+        '{z}/{x}/{-y}.pbf'
+    })
+
+
+        var bagpanden = new ol.layer.VectorTile({
+        source: bagsource,
+        style: createBagStyle
+
+    });
+    bagsource.on('tileloadend',function(e){
+        var features = e.tile.getFeatures();
+        features.forEach(function(f){
+            var begin = f.get('begindatumtijdvakgeldigheid');
+            var eind = f.get('einddatumtijdvakgeldigheid');
+            f.begin =(begin===undefined)?null:new Date(begin);
+            f.eind = (eind===undefined)?NOW:new Date(eind);
+        })
+    })
+/*
+    var verblijfsobject = new ol.layer.VectorTile({
         source: new ol.source.VectorTile({
-            attributions: 'BAG data: © <a href="https://www.kadaster.nl/bag">Kadaster</a> ' +
-            'Client: <a href="https://research.geodan.nl/">' +
-            'Geodan Research</a>',
-            format: new ol.format.MVT({
-                featureClass: ol.Feature
-            }),
-            tileGrid: ol.tilegrid.createXYZ({maxZoom: 22}),
-            tilePixelRatio: 1.000000001,
-            url: '//research.geodan.nl/service/geoserver/gwc/service/tms/1.0.0/research%3Apand@World_3857@pbf/' +
-            '{z}/{x}/{-y}.pbf'
+            format: new ol.format.MVT(),
+            projection: 'EPSG:4326',
+            tileGrid: ol.tilegrid.createXYZ({maxZoom: 26}),
+            tilePixelRatio: 16,
+            url: 'http://metis:3001/bagactueel/verblijfsobjectgebruiksdoelpand/{z}/{x}/{y}.mvt' // 'http://localhost/mvt/gemeente/{z}/{x}/{y}.pbf'
         }),
         style: createStyle
+    })*/
+var verblijfsource = new ol.source.VectorTile({
+        attributions: 'BAG data: © <a href="https://www.kadaster.nl/bag">Kadaster</a> ' +
+        'Client: <a href="https://research.geodan.nl/">' +
+        'Geodan Research</a>',
+        format: new ol.format.MVT(),
+        tileGrid: ol.tilegrid.createXYZ({maxZoom: 22}),
+        tilePixelRatio: 1.000000001,
+        url: '//research.geodan.nl/service/geoserver/gwc/service/tms/1.0.0/research%3Averblijfsobjectgebruiksdoelpand@World_3857@pbf/' +
+        '{z}/{x}/{-y}.pbf'
 
+    });
+    var verblijfsobject = new ol.layer.VectorTile({
+        source: verblijfsource,
+        style: createStyle
+
+
+    });
+
+
+
+
+    verblijfsource.on('tileloadend',function(e){
+        var features = e.tile.getFeatures();
+        var gebruiksdoelen = [];
+        features.forEach(function(f){
+            var begin = f.get('begindatumtijdvakgeldigheid');
+            var eind = f.get('einddatumtijdvakgeldigheid');
+            f.begin =(begin===undefined)?null:new Date(begin);
+            f.eind = (eind===undefined)?NOW:new Date(eind);
+            var id = 'gb'+f.get('gid');
+            if(!GEBRUIKSDOELEN[id]) {
+                var props = f.getProperties();
+                props.gebruiksdoelverblijfsobjectArr = props.gebruiksdoelverblijfsobject.split(',');
+                props.gerelateerdpandArr = props.gerelateerdpand.split(',');
+                props.begin = f.begin;
+                props.eind = f.eind;
+                GEBRUIKSDOELEN[id] = GB.push(props);
+                gebruiksdoelen.push(props);
+            }
+        })
+        GBG= GBG.concat(gebruiksdoelen.filter(function(g){return checkGeldigheid(g.begin,g.eind)}));
+        checkGebruiksDoel(gebruiksdoelen);
+        UPDATE()
     });
     var map = new ol.Map({
     layers: [
@@ -106,7 +244,8 @@
                 url: 'https://saturnus.geodan.nl/mapproxy/osm/tiles/osmgrayscale_EPSG900913/{z}/{x}/{y}.png?origin=nw'
             })
         }),
-        bagpanden
+        bagpanden,
+        verblijfsobject
     ],
         target: 'map',
         view: new ol.View({
@@ -115,7 +254,7 @@
         })
     });
 
-
+    //
 
      var displayFeatureInfo = function(pixel) {
 
@@ -134,12 +273,39 @@
 
 
     $('#tijd').on('input',function (d,e) {
-        GELDIGHEID = new Date('01/01/'+d.target.value);
+        var val = d.target.value;
+        if(val=='325') {
+            GELDIGHEID = new Date(NOW.getTime()-1);
 
+        }
+        else {
+            var jaar = 1990+Math.floor(val/12);
+            var maand = Math.round((val/12 - (jaar-1990))*12)+1;
+            console.log(maand,jaar)
+            GELDIGHEID =new Date(maand+'/01/'+jaar)
 
-        bagpanden.changed();
+        }
+        GBG= GB.filter(function(g){ return checkGeldigheid(g.begin,g.eind)});
+        console.log(GBG.length)
+
+        UPDATE();
+
         var e =document.getElementById('datum');
-        e.innerHTML =d.target.value;
+        e.innerHTML = GELDIGHEID.toDateString()
+    })
+
+    $('.gbdoel').on('change',function(evt){
+        var val = evt.target.value;
+
+        if(evt.target.checked) {
+            ACTIEFGEBRUIK.push(val)
+            ACTIEFGEBRUIK = [...new Set(ACTIEFGEBRUIK)]
+        }
+        else {
+            ACTIEFGEBRUIK.splice(ACTIEFGEBRUIK.indexOf(val),1)
+        }
+        checkGebruiksDoel();
+        UPDATE();
     })
     map.on('moveend', function() {
         var view = map.getView();
@@ -147,6 +313,10 @@
         window.location.hash =
             view.getZoom() + ';' + center[0] + ';' + center[1];
     });
+    var UPDATE = function(){
+        bagsource.changed();
+        verblijfsobject.changed();
+    }
 </script>
 </body>
 </html>
